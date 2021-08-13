@@ -25,7 +25,8 @@ import java.util.Map;
 import java.util.concurrent.*;
 
 /**
- * Created by hzllb on 2018/11/18.
+ * @author lwei25
+ * @date 2021/08/12
  */
 @Controller("/order")
 @RequestMapping("/order")
@@ -56,7 +57,10 @@ public class OrderController extends BaseController {
         executorService = Executors.newFixedThreadPool(20);
     }
 
-    // 生成验证码
+    /**
+     * @description 生成验证码
+     * @param response
+     */
     @RequestMapping(value = "/generateverifycode",method = {RequestMethod.POST, RequestMethod.GET})
     @ResponseBody
     public void generateverifycode(HttpServletResponse response) throws BusinessException, IOException {
@@ -78,7 +82,12 @@ public class OrderController extends BaseController {
         ImageIO.write((RenderedImage) map.get("codePic"), "jpeg", response.getOutputStream());
     }
 
-    // 生成秒杀令牌
+    /**
+     * @description 生成秒杀令牌
+     * @param itemId
+     * @param promoId
+     * @param verifyCode
+     */
     @RequestMapping(value = "/generatetoken",method = {RequestMethod.POST},consumes={CONTENT_TYPE_FORMED})
     @ResponseBody
     public CommonReturnType generateToken(@RequestParam(name="itemId") Integer itemId,
@@ -115,7 +124,14 @@ public class OrderController extends BaseController {
         return CommonReturnType.create(promoToken);
     }
 
-    //封装下单请求
+
+    /**
+     * @description 下单请求
+     * @param itemId
+     * @param amount
+     * @param promoId
+     * @param promoToken
+     */
     @RequestMapping(value = "/createorder",method = {RequestMethod.POST},consumes={CONTENT_TYPE_FORMED})
     @ResponseBody
     public CommonReturnType createOrder(@RequestParam(name="itemId")Integer itemId,
@@ -127,19 +143,12 @@ public class OrderController extends BaseController {
         if(StringUtils.isEmpty(token)) {
             throw new BusinessException(EmBusinessError.USER_NOT_LOGIN,"用户还未登陆，不能下单");
         }
+
         // 获取用户登录信息
         UserModel userModel = (UserModel) redisTemplate.opsForValue().get(token);
         if(userModel == null) {
             throw new BusinessException(EmBusinessError.USER_NOT_LOGIN,"用户还未登陆，不能下单");
         }
-        // Boolean isLogin = (Boolean) httpServletRequest.getSession().getAttribute("IS_LOGIN");
-        //if(isLogin == null || !isLogin.booleanValue()){
-        //}
-
-        //获取用户的登陆信息
-        //UserModel userModel = (UserModel)httpServletRequest.getSession().getAttribute("LOGIN_USER");
-
-        //OrderModel orderModel = orderService.createOrder(userModel.getId(),itemId,promoId,amount);
 
         // 校验秒杀令牌是否正确
         if(promoId != null) {

@@ -40,7 +40,16 @@ public class UserController  extends BaseController{
     @Resource
     private RedisTemplate redisTemplate;
 
-    //用户注册接口
+
+    /**
+     * @description 用户注册接口
+     * @param telphone
+     * @param otpCode
+     * @param name
+     * @param gender
+     * @param age
+     * @param password
+     */
     @RequestMapping(value = "/register",method = {RequestMethod.POST},consumes={CONTENT_TYPE_FORMED})
     @ResponseBody
     public CommonReturnType register(@RequestParam(name="telphone") String telphone,
@@ -64,9 +73,15 @@ public class UserController  extends BaseController{
         userModel.setEncrptPassword(this.EncodeByMd5(password));
         userService.register(userModel);
 
+        log.info("手机号码:{}注册成功", telphone);
         return CommonReturnType.create(null);
     }
 
+
+    /**
+     * @description 用户密码加密
+     * @param str
+     */
     public String EncodeByMd5(String str) throws NoSuchAlgorithmException, UnsupportedEncodingException {
         //确定计算方法
         MessageDigest md5 = MessageDigest.getInstance("MD5");
@@ -76,7 +91,12 @@ public class UserController  extends BaseController{
         return newstr;
     }
 
-    //用户获取otp短信接口
+
+    /**
+     * @description 用户获取otp短信接口
+     * @param telphone
+     * @return
+     */
     @RequestMapping(value = "/getotp",method = {RequestMethod.POST},consumes={CONTENT_TYPE_FORMED})
     @ResponseBody
     public CommonReturnType getOtp(@RequestParam(name="telphone")String telphone){
@@ -88,7 +108,6 @@ public class UserController  extends BaseController{
 
         //将OTP验证码同对应用户的手机号关联，使用httpsession的方式绑定他的手机号与OTPCODE
         httpServletRequest.getSession().setAttribute(telphone, otpCode);
-        log.info("session content: {}", httpServletRequest.getSession().getAttribute(telphone).toString());
 
         //将OTP验证码通过短信通道发送给用户,省略
         log.info("telphone = {} & otpCode = {}", telphone, otpCode);
@@ -96,6 +115,11 @@ public class UserController  extends BaseController{
         return CommonReturnType.create(null);
     }
 
+
+    /**
+     * @description 查询用户信息
+     * @param id
+     */
     @RequestMapping("/get")
     @ResponseBody
     public CommonReturnType getUser(@RequestParam(name="id") Integer id) throws BusinessException {
@@ -108,11 +132,12 @@ public class UserController  extends BaseController{
         }
 
         //讲核心领域模型用户对象转化为可供UI使用的viewobject
-        UserVO userVO  = convertFromModel(userModel);
+        UserVO userVO = convertFromModel(userModel);
 
         //返回通用对象
         return CommonReturnType.create(userVO);
     }
+
 
     private UserVO convertFromModel(UserModel userModel){
         if(userModel == null){
@@ -123,7 +148,12 @@ public class UserController  extends BaseController{
         return userVO;
     }
 
-    //用户登陆接口
+
+    /**
+     * @description 用户登陆接口
+     * @param telphone
+     * @param password
+     */
     @RequestMapping(value = "/login",method = {RequestMethod.POST},consumes={CONTENT_TYPE_FORMED})
     @ResponseBody
     public CommonReturnType login(@RequestParam(name="telphone")String telphone,
@@ -144,11 +174,10 @@ public class UserController  extends BaseController{
         // 生成登录凭证token, UUID
         String uuidToken = UUID.randomUUID().toString();
         uuidToken = uuidToken.replace("-", "");
+
         // 建立token和用户登录态的联系
         redisTemplate.opsForValue().set(uuidToken, userModel);
         redisTemplate.expire(uuidToken, 1, TimeUnit.HOURS);
-//        this.httpServletRequest.getSession().setAttribute("IS_LOGIN",true);
-//        this.httpServletRequest.getSession().setAttribute("LOGIN_USER",userModel);
 
         // 下发token
         return CommonReturnType.create(uuidToken);

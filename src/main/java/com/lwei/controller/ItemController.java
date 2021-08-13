@@ -40,7 +40,14 @@ public class ItemController extends BaseController {
     @Autowired
     private PromoService promoService;
 
-    //创建商品的controller
+    /**
+     * @description 创建商品
+     * @param title 商品名
+     * @param description 商品描述
+     * @param price 价格
+     * @param stock 库存
+     * @param imgUrl 图片url
+     */
     @RequestMapping(value = "/create",method = {RequestMethod.POST}, consumes={CONTENT_TYPE_FORMED})
     @ResponseBody
     public CommonReturnType createItem(@RequestParam(name = "title")String title,
@@ -62,6 +69,11 @@ public class ItemController extends BaseController {
         return CommonReturnType.create(itemVO);
     }
 
+
+    /**
+     * @description 发布秒杀商品
+     * @param id
+     */
     @RequestMapping(value = "/publishpromo",method = {RequestMethod.GET})
     @ResponseBody
     public CommonReturnType publishpromo(@RequestParam(name = "id")Integer id){
@@ -69,7 +81,11 @@ public class ItemController extends BaseController {
         return CommonReturnType.create(null);
     }
 
-    //商品详情页浏览
+
+    /**
+     * @description 商品详情页浏览
+     * @param id 商品id
+     */
     @RequestMapping(value = "/get",method = {RequestMethod.GET})
     @ResponseBody
     public CommonReturnType getItem(@RequestParam(name = "id")Integer id){
@@ -92,10 +108,12 @@ public class ItemController extends BaseController {
         }
         ItemVO itemVO = convertVOFromModel(itemModel);
         return CommonReturnType.create(itemVO);
-
     }
 
-    //商品列表页面浏览
+
+    /**
+     * @description 商品列表页面浏览
+     */
     @RequestMapping(value = "/list",method = {RequestMethod.GET})
     @ResponseBody
     public CommonReturnType listItem(){
@@ -108,6 +126,7 @@ public class ItemController extends BaseController {
         }).collect(Collectors.toList());
         return CommonReturnType.create(itemVOList);
     }
+
 
     private ItemVO convertVOFromModel(ItemModel itemModel){
         if(itemModel == null){
