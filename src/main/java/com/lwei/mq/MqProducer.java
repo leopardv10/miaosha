@@ -11,12 +11,12 @@ import org.apache.rocketmq.client.producer.*;
 import org.apache.rocketmq.common.message.Message;
 import org.apache.rocketmq.common.message.MessageExt;
 import org.apache.rocketmq.remoting.exception.RemotingException;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.PostConstruct;
-import java.nio.charset.Charset;
+import javax.annotation.Resource;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -34,10 +34,10 @@ public class MqProducer {
 	@Value("${mq.topicname}")
 	private String topicName;
 
-	@Autowired
+	@Resource
 	private OrderService orderService;
 
-	@Autowired
+	@Resource
 	private StockLogDOMapper stockLogDOMapper;
 
 	@PostConstruct
@@ -54,11 +54,11 @@ public class MqProducer {
 		transactionMQProducer.setTransactionListener(new TransactionListener() {
 			@Override
 			public LocalTransactionState executeLocalTransaction(Message message, Object arg) {
-				Integer itemId = (Integer) ((Map) arg).get("itemId");
-				Integer userId = (Integer) ((Map) arg).get("userId");
-				Integer amount = (Integer) ((Map) arg).get("amount");
-				Integer promoId = (Integer) ((Map) arg).get("promoId");
-				String stockLogId = (String) ((Map) arg).get("stockLogId");
+				Integer itemId = (Integer) ((Map)arg).get("itemId");
+				Integer userId = (Integer) ((Map)arg).get("userId");
+				Integer amount = (Integer) ((Map)arg).get("amount");
+				Integer promoId = (Integer) ((Map)arg).get("promoId");
+				String stockLogId = (String) ((Map)arg).get("stockLogId");
 
 				// 真正要做的事，创建订单
 				try {
@@ -97,7 +97,9 @@ public class MqProducer {
 		});
 	}
 
-	// 事务型异步库存扣减消息
+	/**
+	 * @description 事务型异步库存扣减消息
+	 */
 	public boolean transactionAsyncReduceStock(Integer userId, Integer itemId, Integer promoId, Integer amount, String stockLogId) {
 		Map<String, Object> bodyMap = new HashMap<>();
 		bodyMap.put("itemId", itemId);
@@ -112,9 +114,9 @@ public class MqProducer {
 		argsMap.put("stockLogId", stockLogId);
 
 		Message message = new Message(topicName, "increase",
-				JSON.toJSON(bodyMap).toString().getBytes(Charset.forName("UTF-8")));
+				JSON.toJSON(bodyMap).toString().getBytes(StandardCharsets.UTF_8));
 
-		TransactionSendResult sendResult = null;
+		TransactionSendResult sendResult;
 
 		try {
 			sendResult = transactionMQProducer.sendMessageInTransaction(message, argsMap);
@@ -132,26 +134,19 @@ public class MqProducer {
 		}
 	}
 
-	// 异步库存扣减消息
+	/**
+	 * @description 异步库存扣减消息
+	 */
 	public boolean asyncReduceStock(Integer itemId, Integer amount) {
 		Map<String, Object> bodyMap = new HashMap<>();
 		bodyMap.put("itemId", itemId);
 		bodyMap.put("amount", amount);
 
 		Message message = new Message(topicName, "increase",
-				JSON.toJSON(bodyMap).toString().getBytes(Charset.forName("UTF-8")));
+				JSON.toJSON(bodyMap).toString().getBytes(StandardCharsets.UTF_8));
 		try {
 			producer.send(message, 100000);
-		} catch (MQClientException e) {
-			e.printStackTrace();
-			return false;
-		} catch (RemotingException e) {
-			e.printStackTrace();
-			return false;
-		} catch (MQBrokerException e) {
-			e.printStackTrace();
-			return false;
-		} catch (InterruptedException e) {
+		} catch (MQClientException | RemotingException | MQBrokerException | InterruptedException e) {
 			e.printStackTrace();
 			return false;
 		}

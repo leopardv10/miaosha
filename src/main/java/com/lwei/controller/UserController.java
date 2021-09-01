@@ -23,10 +23,11 @@ import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 /**
- * Created by hzllb on 2018/11/11.
+ * @author lwei25
+ * @date 2021/08/12
  */
 @Slf4j
-@RestController("user")
+@RestController("/user")
 @RequestMapping("/user")
 @CrossOrigin(allowCredentials="true", allowedHeaders = "*")
 public class UserController  extends BaseController{
@@ -38,8 +39,7 @@ public class UserController  extends BaseController{
     private HttpServletRequest httpServletRequest;
 
     @Resource
-    private RedisTemplate redisTemplate;
-
+    private RedisTemplate<String, Object> redisTemplate;
 
     /**
      * @description 用户注册接口
@@ -57,7 +57,8 @@ public class UserController  extends BaseController{
                                      @RequestParam(name="name") String name,
                                      @RequestParam(name="gender") Integer gender,
                                      @RequestParam(name="age") Integer age,
-                                     @RequestParam(name="password") String password) throws BusinessException, UnsupportedEncodingException, NoSuchAlgorithmException {
+                                     @RequestParam(name="password") String password)
+            throws BusinessException, UnsupportedEncodingException, NoSuchAlgorithmException {
         //验证手机号和对应的otpcode相符合
         String inSessionOtpCode = (String) this.httpServletRequest.getSession().getAttribute(telphone);
         if(!com.alibaba.druid.util.StringUtils.equals(otpCode,inSessionOtpCode)){
@@ -77,7 +78,6 @@ public class UserController  extends BaseController{
         return CommonReturnType.create(null);
     }
 
-
     /**
      * @description 用户密码加密
      * @param str
@@ -90,7 +90,6 @@ public class UserController  extends BaseController{
         String newstr = base64en.encode(md5.digest(str.getBytes("utf-8")));
         return newstr;
     }
-
 
     /**
      * @description 用户获取otp短信接口
@@ -115,7 +114,6 @@ public class UserController  extends BaseController{
         return CommonReturnType.create(null);
     }
 
-
     /**
      * @description 查询用户信息
      * @param id
@@ -138,7 +136,6 @@ public class UserController  extends BaseController{
         return CommonReturnType.create(userVO);
     }
 
-
     private UserVO convertFromModel(UserModel userModel){
         if(userModel == null){
             return null;
@@ -148,7 +145,6 @@ public class UserController  extends BaseController{
         return userVO;
     }
 
-
     /**
      * @description 用户登陆接口
      * @param telphone
@@ -157,25 +153,23 @@ public class UserController  extends BaseController{
     @RequestMapping(value = "/login",method = {RequestMethod.POST},consumes={CONTENT_TYPE_FORMED})
     @ResponseBody
     public CommonReturnType login(@RequestParam(name="telphone")String telphone,
-                                  @RequestParam(name="password")String password) throws BusinessException, UnsupportedEncodingException, NoSuchAlgorithmException {
+                                  @RequestParam(name="password")String password)
+            throws BusinessException, UnsupportedEncodingException, NoSuchAlgorithmException {
 
-        //入参校验
+        // 检查账号、密码是否为空
         if(org.apache.commons.lang3.StringUtils.isEmpty(telphone)||
                 StringUtils.isEmpty(password)){
             throw new BusinessException(EmBusinessError.PARAMETER_VALIDATION_ERROR);
         }
 
-        //用户登陆服务,用来校验用户登陆是否合法
+        // 校验用户名、密码是否匹配
         UserModel userModel = userService.validateLogin(telphone,this.EncodeByMd5(password));
-        //将登陆凭证加入到用户登陆成功的session内
 
-        // 修改成若用户登录验证成功后将对应的登录信息喝登陆凭证一起放入redis中
-
-        // 生成登录凭证token, UUID
+        // 生成登录凭证token
         String uuidToken = UUID.randomUUID().toString();
         uuidToken = uuidToken.replace("-", "");
 
-        // 建立token和用户登录态的联系
+        // token为key, userModel为value, 放入redis中
         redisTemplate.opsForValue().set(uuidToken, userModel);
         redisTemplate.expire(uuidToken, 1, TimeUnit.HOURS);
 

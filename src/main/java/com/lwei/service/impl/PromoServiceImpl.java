@@ -33,7 +33,7 @@ public class PromoServiceImpl implements PromoService {
     private ItemService itemService;
 
     @Autowired
-    private RedisTemplate redisTemplate;
+    private RedisTemplate<String, Object> redisTemplate;
 
     @Autowired
     private UserService userService;
@@ -64,7 +64,7 @@ public class PromoServiceImpl implements PromoService {
     public void publishPromo(Integer promoId) {
         // 通过活动id获取活动
         PromoDO promoDO = promoDOMapper.selectByPrimaryKey(promoId);
-        if(promoDO.getItemId() == null || promoDO.getItemId().intValue() == 0) {
+        if(promoDO.getItemId() == null || promoDO.getItemId() == 0) {
             return;
         }
         ItemModel itemModel = itemService.getItemById(promoDO.getItemId());
@@ -72,7 +72,7 @@ public class PromoServiceImpl implements PromoService {
         redisTemplate.opsForValue().set("promo_item_stock_" + itemModel.getId(), itemModel.getStock());
 
         // 将秒杀大闸的限制数字设置到redis内
-        redisTemplate.opsForValue().set("promo_door_count_" + promoId, itemModel.getStock().intValue() * 5);
+        redisTemplate.opsForValue().set("promo_door_count_" + promoId, itemModel.getStock() * 5);
     }
 
     @Override

@@ -74,6 +74,9 @@ public class ItemServiceImpl implements ItemService {
         return itemStockDO;
     }
 
+    /**
+     * @description 创建商品
+     */
     @Override
     @Transactional
     public ItemModel createItem(ItemModel itemModel) throws BusinessException {
@@ -96,6 +99,9 @@ public class ItemServiceImpl implements ItemService {
         return this.getItemById(itemModel.getId());
     }
 
+    /**
+     * @description 商品列表
+     */
     @Override
     public List<ItemModel> listItem() {
         List<ItemDO> itemDOList = itemDOMapper.listItem();
@@ -107,6 +113,9 @@ public class ItemServiceImpl implements ItemService {
         return itemModelList;
     }
 
+    /**
+     * @description 从数据库中查询商品
+     */
     @Override
     public ItemModel getItemById(Integer id) {
         ItemDO itemDO = itemDOMapper.selectByPrimaryKey(id);
@@ -127,6 +136,9 @@ public class ItemServiceImpl implements ItemService {
         return itemModel;
     }
 
+    /**
+     * @description 从缓存中获取商品
+     */
     @Override
     public ItemModel getItemByIdInCache(Integer id) {
         ItemModel itemModel = (ItemModel)redisTemplate.opsForValue().get("item_validate_" + id);
@@ -138,6 +150,9 @@ public class ItemServiceImpl implements ItemService {
         return itemModel;
     }
 
+    /**
+     * @description redis减库存
+     */
     @Override
     @Transactional
     public boolean decreaseStock(Integer itemId, Integer amount) throws BusinessException {
@@ -156,27 +171,37 @@ public class ItemServiceImpl implements ItemService {
         }
     }
 
+    /**
+     * @description 数据库中增加销量
+     */
     @Override
     @Transactional
     public void increaseSales(Integer itemId, Integer amount) throws BusinessException {
         itemDOMapper.increaseSales(itemId, amount);
     }
 
+    /**
+     * @description 异步扣减库存
+     */
     @Override
     public boolean asyncDecreaseStock(Integer itemId, Integer amount) {
-        boolean mqResult = mqProducer.asyncReduceStock(itemId, amount);
-        return mqResult;
+        return mqProducer.asyncReduceStock(itemId, amount);
     }
 
+    /**
+     * redis回补库存
+     */
     @Override
     public boolean increaseStock(Integer itemId, Integer amount) throws BusinessException {
         redisTemplate.opsForValue().increment("promo_item_stock_" + itemId, amount.intValue());
         return true;
     }
 
+    /**
+     * 初始化对应的库存流水
+     */
     @Override
     @Transactional
-    // 初始化对应的库存流水
     public String initStockLog(Integer itemId, Integer amount) {
         StockLogDO stockLogDO = new StockLogDO();
         stockLogDO.setItemId(itemId);

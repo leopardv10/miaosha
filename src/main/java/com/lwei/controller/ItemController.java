@@ -13,31 +13,33 @@ import com.lwei.service.PromoService;
 import com.lwei.service.model.ItemModel;
 import org.joda.time.format.DateTimeFormat;
 import org.springframework.beans.BeanUtils;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 
 import com.lwei.service.ItemService;
 
+import javax.annotation.Resource;
+
 /**
- * Created by hzllb on 2018/11/18.
+ * @author lwei25
+ * @date 2021/08/12
  */
 @Controller("/item")
 @RequestMapping("/item")
 @CrossOrigin(origins = {"*"},allowCredentials = "true")
 public class ItemController extends BaseController {
 
-    @Autowired
+    @Resource
     private ItemService itemService;
 
-    @Autowired
-    private RedisTemplate redisTemplate;
+    @Resource
+    private RedisTemplate<String, Object> redisTemplate;
 
-    @Autowired
+    @Resource
     private CacheService cacheService;
 
-    @Autowired
+    @Resource
     private PromoService promoService;
 
     /**
@@ -69,7 +71,6 @@ public class ItemController extends BaseController {
         return CommonReturnType.create(itemVO);
     }
 
-
     /**
      * @description 发布秒杀商品
      * @param id
@@ -81,7 +82,6 @@ public class ItemController extends BaseController {
         return CommonReturnType.create(null);
     }
 
-
     /**
      * @description 商品详情页浏览
      * @param id 商品id
@@ -89,7 +89,8 @@ public class ItemController extends BaseController {
     @RequestMapping(value = "/get",method = {RequestMethod.GET})
     @ResponseBody
     public CommonReturnType getItem(@RequestParam(name = "id")Integer id){
-        ItemModel itemModel = null;
+        ItemModel itemModel;
+
         // 先取本地缓存
         itemModel = (ItemModel) cacheService.getFromCommonCache("item_" + id);
 
@@ -103,6 +104,7 @@ public class ItemController extends BaseController {
                 redisTemplate.opsForValue().set("item_"+id, itemModel);
                 redisTemplate.expire("item_"+id, 10, TimeUnit.MINUTES);
             }
+
             // 填充本地缓存
             cacheService.setCommonCache("item_" + id, itemModel);
         }
@@ -126,7 +128,6 @@ public class ItemController extends BaseController {
         }).collect(Collectors.toList());
         return CommonReturnType.create(itemVOList);
     }
-
 
     private ItemVO convertVOFromModel(ItemModel itemModel){
         if(itemModel == null){

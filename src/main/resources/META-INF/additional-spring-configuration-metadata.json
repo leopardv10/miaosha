@@ -1,0 +1,8 @@
+{
+  "properties": [
+    {
+      "name": "mq.nameserver.addr",
+      "type": "java.lang.String",
+      "description": "Description for mq.nameserver.addr."
+  }
+] }

@@ -16,6 +16,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.PostConstruct;
+import javax.annotation.Resource;
 import javax.imageio.ImageIO;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -30,24 +31,22 @@ import java.util.concurrent.*;
  */
 @Controller("/order")
 @RequestMapping("/order")
-@CrossOrigin(origins = {"*"},allowCredentials = "true")
+@CrossOrigin(origins = {"*"}, allowCredentials = "true")
 public class OrderController extends BaseController {
-    @Autowired
-    private OrderService orderService;
 
-    @Autowired
+    @Resource
     private HttpServletRequest httpServletRequest;
 
-    @Autowired
-    private RedisTemplate redisTemplate;
+    @Resource
+    private RedisTemplate<String, Object> redisTemplate;
 
-    @Autowired
+    @Resource
     private MqProducer mqProducer;
 
-    @Autowired
+    @Resource
     private ItemService itemService;
 
-    @Autowired
+    @Resource
     private PromoService promoService;
 
     private ExecutorService executorService;
@@ -67,7 +66,7 @@ public class OrderController extends BaseController {
         // 获取前端页面的token
     	String token = httpServletRequest.getParameterMap().get("token")[0];
         if(StringUtils.isEmpty(token)) {
-            throw new BusinessException(EmBusinessError.USER_NOT_LOGIN,"用户还未登陆，不能生成验证码");
+            throw new BusinessException(EmBusinessError.USER_NOT_LOGIN, "用户还未登陆，不能生成验证码");
         }
 
         // 根据token去redis中取userModel
@@ -76,7 +75,8 @@ public class OrderController extends BaseController {
             throw new BusinessException(EmBusinessError.USER_NOT_LOGIN,"用户还未登陆，不能生成验证码");
         }
 
-        Map<String,Object> map = CodeUtil.generateCodeAndPic();
+        // 生成验证码并放入redis
+        Map<String, Object> map = CodeUtil.generateCodeAndPic();
         redisTemplate.opsForValue().set("verify_code_" + userModel.getId(), map.get("code"));
         redisTemplate.expire("verify_code_" + userModel.getId(), 10, TimeUnit.MINUTES);
         ImageIO.write((RenderedImage) map.get("codePic"), "jpeg", response.getOutputStream());
@@ -84,29 +84,26 @@ public class OrderController extends BaseController {
 
     /**
      * @description 生成秒杀令牌
-     * @param itemId
-     * @param promoId
-     * @param verifyCode
      */
     @RequestMapping(value = "/generatetoken",method = {RequestMethod.POST},consumes={CONTENT_TYPE_FORMED})
     @ResponseBody
     public CommonReturnType generateToken(@RequestParam(name="itemId") Integer itemId,
                                         @RequestParam(name="promoId") Integer promoId,
                                         @RequestParam(name="verifyCode") String verifyCode) throws BusinessException {
-        // 根据token获取用户信息
+        // 获取前端token
         String token = httpServletRequest.getParameterMap().get("token")[0];
         if(StringUtils.isEmpty(token)) {
             throw new BusinessException(EmBusinessError.USER_NOT_LOGIN,"用户还未登陆，不能下单");
         }
 
-        // 获取用户登录信息
+        // 根据token获取用户登录信息
         UserModel userModel = (UserModel) redisTemplate.opsForValue().get(token);
         if(userModel == null) {
             throw new BusinessException(EmBusinessError.USER_NOT_LOGIN,"用户还未登陆，不能下单");
         }
 
         // 验证验证码的有效性
-        String redisVerifyCode = (String)redisTemplate.opsForValue().get("verify_code_" + userModel.getId());
+        String redisVerifyCode = (String) redisTemplate.opsForValue().get("verify_code_" + userModel.getId());
         if(StringUtils.isEmpty(redisVerifyCode)) {
             throw new BusinessException(EmBusinessError.PARAMETER_VALIDATION_ERROR, "请求非法");
         }
@@ -116,7 +113,6 @@ public class OrderController extends BaseController {
 
         // 获取秒杀令牌
         String promoToken = promoService.generateSecondKillToken(promoId, itemId, userModel.getId());
-
         if(promoToken == null) {
             throw new BusinessException(EmBusinessError.PARAMETER_VALIDATION_ERROR, "生成令牌失败");
         }
@@ -124,13 +120,8 @@ public class OrderController extends BaseController {
         return CommonReturnType.create(promoToken);
     }
 
-
     /**
      * @description 下单请求
-     * @param itemId
-     * @param amount
-     * @param promoId
-     * @param promoToken
      */
     @RequestMapping(value = "/createorder",method = {RequestMethod.POST},consumes={CONTENT_TYPE_FORMED})
     @ResponseBody
@@ -138,13 +129,13 @@ public class OrderController extends BaseController {
                                         @RequestParam(name="amount")Integer amount,
                                         @RequestParam(name="promoId",required = false)Integer promoId,
                                         @RequestParam(name="promoToken",required = false)String promoToken) throws BusinessException {
-
+        // 获取前端token
         String token = httpServletRequest.getParameterMap().get("token")[0];
         if(StringUtils.isEmpty(token)) {
             throw new BusinessException(EmBusinessError.USER_NOT_LOGIN,"用户还未登陆，不能下单");
         }
 
-        // 获取用户登录信息
+        // 根据token获取用户登录信息
         UserModel userModel = (UserModel) redisTemplate.opsForValue().get(token);
         if(userModel == null) {
             throw new BusinessException(EmBusinessError.USER_NOT_LOGIN,"用户还未登陆，不能下单");
@@ -159,11 +150,10 @@ public class OrderController extends BaseController {
             }
             if(!org.apache.commons.lang3.StringUtils.equals(promoToken, inRedisPromoToken)) {
                 throw new BusinessException(EmBusinessError.PARAMETER_VALIDATION_ERROR, "秒杀令牌校验失败");
-
             }
         }
 
-        // 同步调用线程池的submit方法,拥塞窗口为20的等待队列，用来队列话泄洪
+        // 同步调用线程池的submit方法, 拥塞窗口为20的等待队列, 用来队列话泄洪
         Future<Object> future = executorService.submit(new Callable<Object>() {
             @Override
             public Object call() throws Exception {
@@ -180,9 +170,7 @@ public class OrderController extends BaseController {
 
         try {
             future.get();
-        } catch (InterruptedException e) {
-            throw new BusinessException(EmBusinessError.UNKNOWN_ERROR);
-        } catch (ExecutionException e) {
+        } catch (InterruptedException | ExecutionException e) {
             throw new BusinessException(EmBusinessError.UNKNOWN_ERROR);
         }
 
