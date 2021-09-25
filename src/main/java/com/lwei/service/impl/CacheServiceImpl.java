@@ -9,6 +9,9 @@ import javax.annotation.PostConstruct;
 import java.util.concurrent.TimeUnit;
 
 
+/**
+ * @description JVM本地缓存
+ */
 @Service
 public class CacheServiceImpl implements CacheService {
 

@@ -53,12 +53,16 @@ public class OrderController extends BaseController {
 
     @PostConstruct
     public void init() {
-        executorService = Executors.newFixedThreadPool(20);
+        //executorService = Executors.newFixedThreadPool(20);
+        executorService = new ThreadPoolExecutor(20,
+                20,
+                1,
+                TimeUnit.MINUTES,
+                new ArrayBlockingQueue<>(50000));
     }
 
     /**
      * @description 生成验证码
-     * @param response
      */
     @RequestMapping(value = "/generateverifycode",method = {RequestMethod.POST, RequestMethod.GET})
     @ResponseBody
