@@ -60,7 +60,7 @@ public class MqProducer {
 				Integer promoId = (Integer) ((Map)arg).get("promoId");
 				String stockLogId = (String) ((Map)arg).get("stockLogId");
 
-				// 真正要做的事，创建订单
+				// 真正要做的事，创建订单：redis减库存，订单入库，等一套操作
 				try {
 					orderService.createOrder(userId, itemId, promoId, amount, stockLogId);
 				} catch (BusinessException e) {
